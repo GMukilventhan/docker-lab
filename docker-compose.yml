@@ -1,0 +1,65 @@
+---
+version: "2"
+services:
+  bookstack:
+    image: lscr.io/linuxserver/bookstack
+    container_name: bookstack
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - APP_URL=https://wiki.mgeorge.fr
+      - DB_HOST=bookstack_db
+      - DB_PORT=3306
+      - DB_USER=bookstack
+      - DB_PASS=mydatabasepassword
+      - DB_DATABASE=bookstackapp
+    volumes:
+      - ./bookstack:/config
+    #ports:
+    #  - 6875:80
+    restart: unless-stopped
+    depends_on:
+      - bookstack_db
+  bookstack_db:
+    image: lscr.io/linuxserver/mariadb
+    container_name: bookstack_db
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MYSQL_ROOT_PASSWORD=mysecretrootpassword
+      - TZ=Europe/Paris
+      - MYSQL_DATABASE=bookstackapp
+      - MYSQL_USER=bookstack
+      - MYSQL_PASSWORD=mydatabasepassword
+    volumes:
+      - ./database:/config
+    restart: unless-stopped
+  proxy:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      # These ports are in format <host-port>:<container-port>
+      - '80:80' # Public HTTP Port
+      - '443:443' # Public HTTPS Port
+      - '81:81' # Admin Web Port
+      # Add any other Stream port you want to expose
+      # - '21:21' # FTP
+    environment:
+      # Mysql/Maria connection parameters:
+      #DB_MYSQL_HOST: "db"
+      #DB_MYSQL_PORT: 3306
+      #DB_MYSQL_USER: "npm"
+      #DB_MYSQL_PASSWORD: "npm"
+      #DB_MYSQL_NAME: "npm"
+      # the SQLite DB file within the container
+      DB_SQLITE_FILE: "/data/database.sqlite"
+
+      # Uncomment this if IPv6 is not enabled on your host
+      # DISABLE_IPV6: 'true'
+    volumes:
+      - ./proxy/data:/data
+      - ./proxy/letsencrypt:/etc/letsencrypt
+networks:
+  default:
+    external: true
+    name: web
